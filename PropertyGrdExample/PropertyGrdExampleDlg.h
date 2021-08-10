@@ -39,9 +39,11 @@ public:
 	int nSel;
 	CString ItemSelected;
 	std::string sItemSelected;
-	std::map<std::string, std::vector<int>> registers;
+	std::unordered_map<std::string, std::vector<int>> registers;
+	std::unordered_map<std::string, std::vector<int>> registersGrid;
 	CComboBox comboGender;
 	CMFCPropertyGridCtrl propertyGrid;
+	std::vector<CMFCPropertyGridProperty*> props;
 	CMFCPropertyGridProperty* pProp0;
 	CMFCPropertyGridProperty* pProp1;
 	CMFCPropertyGridProperty* pProp2;
@@ -50,4 +52,5 @@ public:
 	afx_msg void OnBnClickedExpbtn();
 	afx_msg LRESULT OnPropertyChanged(__in WPARAM wparam, __in LPARAM lparam);
 	void changeGrid();
+	bool isValidName(std::string s);
 };

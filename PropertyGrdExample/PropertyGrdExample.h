@@ -10,7 +10,7 @@
 
 #include "resource.h"		// main symbols
 #include <iostream>
-#include <map>
+#include <unordered_map>
 #include <vector>
 // CPropertyGrdExample:
 // See PropertyGrdExample.cpp for the implementation of this class

@@ -126,7 +126,6 @@ HCURSOR CPropertyGrdExampleDlg::OnQueryDragIcon()
 void CPropertyGrdExampleDlg::OnLbnSelchangeList1()
 {
 	CListBox* pList1 = (CListBox*)GetDlgItem(IDC_LIST1);
-	propertyGrid.RemoveAll();
 	nSel = pList1->GetCurSel();
 	if (nSel != LB_ERR)
 	{
@@ -136,33 +135,39 @@ void CPropertyGrdExampleDlg::OnLbnSelchangeList1()
 		sItemSelected = s;				//assign converted local value to class variable in order to use other func
 		CString gender = _T("Female");
 		CString str;
-		str.Format(L"%d", registers.find(s)->second[0]);
+		str.Format(_T("%d"), registers.find(s)->second[0]);
 		if(registers.find(s)->second[3] == 1)	//gender value is saved as 1 or 0 (male : 1, female : 0)
 			gender = _T("Male");
 		//Item's keys and values are added to propertyGrid
 		//Item property NAME item value ItemSelected in propertyGrid
 		pProp0 = new CMFCPropertyGridProperty(_T("NAME"), ItemSelected);	
 		propertyGrid.AddProperty(pProp0);
+		props.push_back(pProp0);
 		//Item's next property Height item's value str in propertyGrid
 		pProp1 = new CMFCPropertyGridProperty(_T("Height"), str);
 		propertyGrid.AddProperty(pProp1);
+		props.push_back(pProp1);
 		//Item's next property Weight item's value str in propertyGrid, value is second element
-		str.Format(L"%d", registers.find(s)->second[1]);
+		str.Format(_T("%d"), registers.find(s)->second[1]);
 		pProp2 = new CMFCPropertyGridProperty(_T("Weight"), str);
 		propertyGrid.AddProperty(pProp2);
+		props.push_back(pProp2);
 		//Item's next property Age item's value str in propertyGrid, value is third element
-		str.Format(L"%d", registers.find(s)->second[2]);
+		str.Format(_T("%d"), registers.find(s)->second[2]);
 		pProp3 = new CMFCPropertyGridProperty(_T("Age"), str);
 		propertyGrid.AddProperty(pProp3);
-		if(registers.find(s)->second[3] == 1) 
-			pProp4 = new CMFCPropertyGridProperty(_T("Male"));
+		props.push_back(pProp3);
+		if (registers.find(s)->second[3] == 1)
+			pProp4 = new CMFCPropertyGridProperty(_T("Gender"), _T("Male"), _T("One of: Male, Female"));
 		else
-			pProp4 = new CMFCPropertyGridProperty(_T("Female"));
-		CMFCPropertyGridProperty* new_prop = new CMFCPropertyGridProperty(_T("Female"));
-		CMFCPropertyGridProperty* new_prop2 = new CMFCPropertyGridProperty(_T("Male"));
-		pProp4->AddSubItem(new_prop);
-		pProp4->AddSubItem(new_prop2);
+			pProp4 = new CMFCPropertyGridProperty(_T("Gender"), _T("Female"), _T("One of: Male, Female"));
+		pProp4->AddOption(_T("Female"));
+		pProp4->AddOption(_T("Male"));
+		pProp4->AllowEdit(FALSE);
 		propertyGrid.AddProperty(pProp4);
+		props.push_back(pProp4);
+		registersGrid.insert(std::make_pair(registers.find(s)->first, std::vector<int>{ registers.find(s)->second[0],
+			registers.find(s)->second[1], registers.find(s)->second[2], registers.find(s)->second[3]}));
 	}
 }
 
@@ -170,17 +175,18 @@ void CPropertyGrdExampleDlg::OnLbnSelchangeList1()
 void CPropertyGrdExampleDlg::OnBnClickedDelbtn()
 {
 	//if choose YES remove item from list and map
-	if (MessageBox(L"	" + ItemSelected, _T("Are you sure to want to delete?"), MB_YESNO) == IDYES) {
+	if (MessageBox(_T("	") + ItemSelected, _T("Are you sure to want to delete?"), MB_YESNO) == IDYES) {
 		CT2CA st(ItemSelected);
 		std::string s(st);		//convert CString to std::string
 		m_listBox.DeleteString(nSel);
 		auto it = registers.find(s);
 		registers.erase(it);
-		propertyGrid.DeleteProperty(pProp0);
-		propertyGrid.DeleteProperty(pProp1);
-		propertyGrid.DeleteProperty(pProp2);
-		propertyGrid.DeleteProperty(pProp3);
-		propertyGrid.DeleteProperty(pProp4);
+		auto itr = registersGrid.find(s);
+		registersGrid.erase(itr);
+		for (int i = 0; i < 5; i++){
+			propertyGrid.DeleteProperty(props[props.size()-1]);
+			props.pop_back();
+		}
 	}
 }
 
@@ -191,17 +197,39 @@ void CPropertyGrdExampleDlg::OnBnClickedSavebtn()
 	//Variables for edit controls
 	wchar_t name[25],  height[4],  weight[4], age[4];
 	//Take values of edit controls and assign corresponding variables
+	bool valid = true;
 	GetDlgItemText(IDC_Name, name, 16);
 	CString NAME = name;
 	CT2CA st(NAME);
 	std::string s(st);						//CString to std::string
+	if(!isValidName(s)){
+		MessageBox(_T("Enter a valid Name!!!"), _T("Warning!!!"));
+		valid = false;
+	}
 	GetDlgItemText(IDC_Height, height, 16);
 	int hgt = _wtoi(height);				//wchar_t to int
+	if (hgt > 250 || hgt < 50) {
+		MessageBox(_T("Enter a valid height!!!"), _T("Warning!!!"));
+		valid = false;
+	}
 	GetDlgItemText(IDC_Weight, weight, 16);
 	int wgt = _wtoi(weight);
+	if (wgt > 170 || wgt < 3) {
+		MessageBox(_T("Enter a valid wgt!!!"), _T("Warning!!!"));
+		valid = false;
+	}
 	GetDlgItemText(IDC_Age, age, 16);
 	int Age = _wtoi(age);
+	if (Age > 120 || Age < 1) {
+		MessageBox(_T("Enter a valid age!!!"), _T("Warning!!!"));
+		valid = false;
+	}
 	int gender = comboGender.GetCurSel();
+	if(gender == -1) {
+		MessageBox(_T("Please choose gender!!!"), _T("Warning!!!"));
+		valid = false;
+	}
+	if (!valid) return;
 	std::vector<int> values;
 	//insert Name as key and value as vector consist of corresponding values
 	registers.insert(std::make_pair(s, std::vector<int>{hgt, wgt, Age, gender}));
@@ -209,9 +237,9 @@ void CPropertyGrdExampleDlg::OnBnClickedSavebtn()
 	m_listBox.AddString(NAME);
 	//clear all edit controls
 	SetDlgItemText(IDC_Name, _T(""));
-	SetDlgItemText(IDC_Height, L"");
-	SetDlgItemText(IDC_Weight, L"");
-	SetDlgItemText(IDC_Age, L"");
+	SetDlgItemText(IDC_Height, _T(""));
+	SetDlgItemText(IDC_Weight, _T(""));
+	SetDlgItemText(IDC_Age, _T(""));
 }
 
 LRESULT CPropertyGrdExampleDlg::OnPropertyChanged(__in WPARAM wparam, __in LPARAM lParam)
@@ -236,30 +264,36 @@ void CPropertyGrdExampleDlg::OnBnClickedExpbtn()
 	}
 	//Open existing file or it doesn't exist create and open
 	FileObj.Open(sFilePath, CFile::modeCreate | CFile::modeWrite | CFile::modeNoTruncate);
-	CString height, weight, age, gender;
-	//Convert integer values to CString and assign corresponding variables
-	height.Format(L"%d", registers.find(sItemSelected)->second[0]);
-	weight.Format(L"%d", registers.find(sItemSelected)->second[1]);
-	age.Format(L"%d", registers.find(sItemSelected)->second[2]);
-	//Determine gender according to value in the last(gender) index
-	if (registers.find(sItemSelected)->second[3] == 1) gender = "Male";
-	else gender = "Female";
-	//Create CString variable according to given format to write file
-	CString str = _T("") + ItemSelected + _T(";") + height + _T(";") + weight + _T(";") + 
-		age + _T(";") + gender + _T("\r\n");
-	FileObj.SeekToEnd();
-	int size = sizeof(str);
-	int len = str.GetLength();
-	FileObj.Write(str.GetString(),len*2);
-	FileObj.Flush();
+	for each (auto item in registersGrid)
+	{
+		std::string name;
+		CString Name, height, weight, age, gender;
+		//Convert integer values to CString and assign corresponding variables
+		Name = item.first.c_str();
+		height.Format(_T("%d"), registersGrid.find(item.first)->second[0]);
+		weight.Format(_T("%d"), registersGrid.find(item.first)->second[1]);
+		age.Format(_T("%d"), registersGrid.find(item.first)->second[2]);
+		//Determine gender according to value in the last(gender) index
+		if (registersGrid.find(item.first)->second[3] == 1) gender = "Male";
+		else gender = "Female";
+		//Create CString variable according to given format to write file
+		CString str = _T("") + Name + _T(";") + height + _T(";") + weight + _T(";") +
+			age + _T(";") + gender + _T("\r\n");
+		FileObj.SeekToEnd();
+		int size = sizeof(str);
+		int len = str.GetLength();
+		FileObj.Write(str.GetString(), len * 2);
+		FileObj.Flush();
+	}
+	
 	FileObj.Close();
 	propertyGrid.UpdateData();
-	propertyGrid.DeleteProperty(pProp0);
-	propertyGrid.DeleteProperty(pProp1);
-	propertyGrid.DeleteProperty(pProp2);
-	propertyGrid.DeleteProperty(pProp3);
-	propertyGrid.DeleteProperty(pProp4);
-	MessageBox(L"Item is saved successfully");
+	int num = props.size();
+	for (int i = 0; i < num; i++) {
+		propertyGrid.DeleteProperty(props[props.size() - 1]);
+		props.pop_back();
+	}
+	MessageBox(_T("Item is saved successfully"));
 }
 
 void CPropertyGrdExampleDlg::changeGrid() {
@@ -293,4 +327,20 @@ void CPropertyGrdExampleDlg::changeGrid() {
 			registers.find(sItemSelected)->second[2] = _wtoi(strTmp);
 		}
 	}
+}
+
+bool CPropertyGrdExampleDlg::isValidName(std::string s) {
+	if (s.length() < 3)
+		return false;
+	bool break_line = false;
+	for (int i = 0; i < s.length(); i++) {
+		if (s[i] < 'A' || s[i] > 'z') {
+			if (s[i] == ' ' && i > 2 && (s.length() - i) > 2 && !break_line) {
+				break_line = true;
+			}
+			else return false;
+		}
+			
+	}
+	return true;
 }
