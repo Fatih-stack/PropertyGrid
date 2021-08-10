@@ -208,7 +208,7 @@ void CPropertyGrdExampleDlg::OnBnClickedSavebtn()
 	//add name to listbox
 	m_listBox.AddString(NAME);
 	//clear all edit controls
-	SetDlgItemText(IDC_Name, L"");
+	SetDlgItemText(IDC_Name, _T(""));
 	SetDlgItemText(IDC_Height, L"");
 	SetDlgItemText(IDC_Weight, L"");
 	SetDlgItemText(IDC_Age, L"");
@@ -230,6 +230,9 @@ void CPropertyGrdExampleDlg::OnBnClickedExpbtn()
 	if (dlg.DoModal() == IDOK)
 	{
 		sFilePath = dlg.GetPathName();
+	}
+	else {
+		return;
 	}
 	//Open existing file or it doesn't exist create and open
 	FileObj.Open(sFilePath, CFile::modeCreate | CFile::modeWrite | CFile::modeNoTruncate);
