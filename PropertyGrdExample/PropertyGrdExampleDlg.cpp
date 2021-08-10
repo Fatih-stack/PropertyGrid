@@ -35,10 +35,8 @@ BEGIN_MESSAGE_MAP(CPropertyGrdExampleDlg, CDialogEx)
 	ON_LBN_SELCHANGE(IDC_LIST1, &CPropertyGrdExampleDlg::OnLbnSelchangeList1)
 	ON_BN_CLICKED(IDC_DelBTN, &CPropertyGrdExampleDlg::OnBnClickedDelbtn)
 	ON_BN_CLICKED(IDC_SaveBTN, &CPropertyGrdExampleDlg::OnBnClickedSavebtn)
-	ON_STN_CLICKED(IDC_MFCPROPERTYGRID1, &CPropertyGrdExampleDlg::OnStnClickedMfcpropertygrid1)
-	ON_STN_ENABLE(IDC_MFCPROPERTYGRID1, &CPropertyGrdExampleDlg::OnStnEnableMfcpropertygrid1)
-	ON_STN_DBLCLK(IDC_MFCPROPERTYGRID1, &CPropertyGrdExampleDlg::OnStnDblclickMfcpropertygrid1)
 	ON_BN_CLICKED(IDC_ExpBTN, &CPropertyGrdExampleDlg::OnBnClickedExpbtn)
+	ON_REGISTERED_MESSAGE(AFX_WM_PROPERTY_CHANGED, OnPropertyChanged)
 END_MESSAGE_MAP()
 
 
@@ -143,22 +141,28 @@ void CPropertyGrdExampleDlg::OnLbnSelchangeList1()
 			gender = _T("Male");
 		//Item's keys and values are added to propertyGrid
 		//Item property NAME item value ItemSelected in propertyGrid
-		CMFCPropertyGridProperty* pProp3 = new CMFCPropertyGridProperty(_T("NAME"), ItemSelected);	
-		propertyGrid.AddProperty(pProp3);
+		pProp0 = new CMFCPropertyGridProperty(_T("NAME"), ItemSelected);	
+		propertyGrid.AddProperty(pProp0);
 		//Item's next property Height item's value str in propertyGrid
-		pProp3 = new CMFCPropertyGridProperty(_T("Height"), str);
-		propertyGrid.AddProperty(pProp3);
+		pProp1 = new CMFCPropertyGridProperty(_T("Height"), str);
+		propertyGrid.AddProperty(pProp1);
 		//Item's next property Weight item's value str in propertyGrid, value is second element
 		str.Format(L"%d", registers.find(s)->second[1]);
-		pProp3 = new CMFCPropertyGridProperty(_T("Weight"), str);
-		propertyGrid.AddProperty(pProp3);
+		pProp2 = new CMFCPropertyGridProperty(_T("Weight"), str);
+		propertyGrid.AddProperty(pProp2);
 		//Item's next property Age item's value str in propertyGrid, value is third element
 		str.Format(L"%d", registers.find(s)->second[2]);
 		pProp3 = new CMFCPropertyGridProperty(_T("Age"), str);
 		propertyGrid.AddProperty(pProp3);
-		pProp3 = new CMFCPropertyGridProperty(_T("Gender"), gender);
-		propertyGrid.AddProperty(pProp3);
-
+		if(registers.find(s)->second[3] == 1) 
+			pProp4 = new CMFCPropertyGridProperty(_T("Male"));
+		else
+			pProp4 = new CMFCPropertyGridProperty(_T("Female"));
+		CMFCPropertyGridProperty* new_prop = new CMFCPropertyGridProperty(_T("Female"));
+		CMFCPropertyGridProperty* new_prop2 = new CMFCPropertyGridProperty(_T("Male"));
+		pProp4->AddSubItem(new_prop);
+		pProp4->AddSubItem(new_prop2);
+		propertyGrid.AddProperty(pProp4);
 	}
 }
 
@@ -166,12 +170,17 @@ void CPropertyGrdExampleDlg::OnLbnSelchangeList1()
 void CPropertyGrdExampleDlg::OnBnClickedDelbtn()
 {
 	//if choose YES remove item from list and map
-	if (MessageBox(NULL, _T("Are you sure to want to delete?") + ItemSelected, MB_YESNO) == IDYES) {
+	if (MessageBox(L"	" + ItemSelected, _T("Are you sure to want to delete?"), MB_YESNO) == IDYES) {
 		CT2CA st(ItemSelected);
 		std::string s(st);		//convert CString to std::string
 		m_listBox.DeleteString(nSel);
 		auto it = registers.find(s);
 		registers.erase(it);
+		propertyGrid.DeleteProperty(pProp0);
+		propertyGrid.DeleteProperty(pProp1);
+		propertyGrid.DeleteProperty(pProp2);
+		propertyGrid.DeleteProperty(pProp3);
+		propertyGrid.DeleteProperty(pProp4);
 	}
 }
 
@@ -205,22 +214,56 @@ void CPropertyGrdExampleDlg::OnBnClickedSavebtn()
 	SetDlgItemText(IDC_Age, L"");
 }
 
-
-void CPropertyGrdExampleDlg::OnStnClickedMfcpropertygrid1()
+LRESULT CPropertyGrdExampleDlg::OnPropertyChanged(__in WPARAM wparam, __in LPARAM lParam)
+{	
+	changeGrid();
+	return 0;
+}
+//If file is not exist create file and write chosen item to this file ( as Name;175;75;20;Male)
+//If exist add chosen item to file
+void CPropertyGrdExampleDlg::OnBnClickedExpbtn()
 {
-
+	CFile FileObj;		//Variable for file operations
+	CString sFilePath;
+	const TCHAR szFilter[] = _T("TXT Files (*.txt)|*.txt|All Files (*.*)|*.*||");
+	CFileDialog dlg(FALSE, _T("txt"), NULL, OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT, szFilter, this);
+	if (dlg.DoModal() == IDOK)
+	{
+		sFilePath = dlg.GetPathName();
+	}
+	//Open existing file or it doesn't exist create and open
+	FileObj.Open(sFilePath, CFile::modeCreate | CFile::modeWrite | CFile::modeNoTruncate);
+	CString height, weight, age, gender;
+	//Convert integer values to CString and assign corresponding variables
+	height.Format(L"%d", registers.find(sItemSelected)->second[0]);
+	weight.Format(L"%d", registers.find(sItemSelected)->second[1]);
+	age.Format(L"%d", registers.find(sItemSelected)->second[2]);
+	//Determine gender according to value in the last(gender) index
+	if (registers.find(sItemSelected)->second[3] == 1) gender = "Male";
+	else gender = "Female";
+	//Create CString variable according to given format to write file
+	CString str = _T("") + ItemSelected + _T(";") + height + _T(";") + weight + _T(";") + 
+		age + _T(";") + gender + _T("\r\n");
+	FileObj.SeekToEnd();
+	int size = sizeof(str);
+	int len = str.GetLength();
+	FileObj.Write(str.GetString(),len*2);
+	FileObj.Flush();
+	FileObj.Close();
+	propertyGrid.UpdateData();
+	propertyGrid.DeleteProperty(pProp0);
+	propertyGrid.DeleteProperty(pProp1);
+	propertyGrid.DeleteProperty(pProp2);
+	propertyGrid.DeleteProperty(pProp3);
+	propertyGrid.DeleteProperty(pProp4);
+	MessageBox(L"Item is saved successfully");
 }
 
-
-void CPropertyGrdExampleDlg::OnStnEnableMfcpropertygrid1()
-{
-}
-
-//Click edited key and take edited value and change value in the map
-void CPropertyGrdExampleDlg::OnStnDblclickMfcpropertygrid1()
-{
+void CPropertyGrdExampleDlg::changeGrid() {
 	CMFCPropertyGridProperty* pProperty;//Define a pointer to the child
 	pProperty = propertyGrid.GetCurSel();	//take selection
+	if(pProperty == nullptr)
+		return;
 	CString str = pProperty->GetName();		//take key
 	COleVariant strValue = pProperty->GetValue();	//take value
 	CString strTmp = (CString)strValue;
@@ -247,33 +290,4 @@ void CPropertyGrdExampleDlg::OnStnDblclickMfcpropertygrid1()
 			registers.find(sItemSelected)->second[2] = _wtoi(strTmp);
 		}
 	}
-}
-
-//If file is not exist create file and write chosen item to this file ( as Name;175;75;20;Male)
-//If exist add chosen item to file
-void CPropertyGrdExampleDlg::OnBnClickedExpbtn()
-{
-	CFile FileObj;		//Variable for file operations
-	//Open existing file or it doesn't exist create and open
-	FileObj.Open(L"Registers.txt", CFile::modeCreate | CFile::modeWrite | CFile::modeNoTruncate);
-	CString height, weight, age, gender;
-	//Convert integer values to CString and assign corresponding variables
-	height.Format(L"%d", registers.find(sItemSelected)->second[0]);
-	weight.Format(L"%d", registers.find(sItemSelected)->second[1]);
-	age.Format(L"%d", registers.find(sItemSelected)->second[2]);
-	//Determine gender according to value in the last(gender) index
-	if (registers.find(sItemSelected)->second[3] == 1) gender = "Male";
-	else gender = "Female";
-	//Create CString variable according to given format to write file
-	CString str = _T("") + ItemSelected + _T(";") + height + _T(";") + weight + _T(";") + 
-		age + _T(";") + gender + _T("\r\n");
-	FileObj.SeekToEnd();
-	int size = sizeof(str);
-	int len = str.GetLength();
-	FileObj.Write(str.GetString(),len*2);
-	FileObj.Flush();
-	FileObj.Close();
-	propertyGrid.UpdateData();
-	propertyGrid.RemoveAll();
-	MessageBox(L"Register is saved to txt file");
 }

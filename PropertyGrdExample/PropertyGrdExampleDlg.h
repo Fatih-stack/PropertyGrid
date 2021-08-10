@@ -42,8 +42,12 @@ public:
 	std::map<std::string, std::vector<int>> registers;
 	CComboBox comboGender;
 	CMFCPropertyGridCtrl propertyGrid;
-	afx_msg void OnStnClickedMfcpropertygrid1();
-	afx_msg void OnStnEnableMfcpropertygrid1();
-	afx_msg void OnStnDblclickMfcpropertygrid1();
+	CMFCPropertyGridProperty* pProp0;
+	CMFCPropertyGridProperty* pProp1;
+	CMFCPropertyGridProperty* pProp2;
+	CMFCPropertyGridProperty* pProp3;
+	CMFCPropertyGridProperty* pProp4;
 	afx_msg void OnBnClickedExpbtn();
+	afx_msg LRESULT OnPropertyChanged(__in WPARAM wparam, __in LPARAM lparam);
+	void changeGrid();
 };
